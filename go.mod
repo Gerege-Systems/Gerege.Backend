@@ -1,3 +1,3 @@
-module github.com/gerege-systems/gerege.backend/v1
+module github.com/gerege-systems/gerege-backend
 
 go 1.22.0
