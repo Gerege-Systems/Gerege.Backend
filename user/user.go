@@ -109,7 +109,7 @@ func (c *UserClient) Find(req *ReqFind) (*ResFind, error) {
 		return nil, err
 	}
 
-	httpResponse := httpclient.Send(&httpclient.Config{
+	httpResponse := httpclient.Send(&httpclient.HttpConfig{
 		Url:    c.Url + "/user/find",
 		Method: "POST",
 		Headers: &map[string]string{
@@ -135,7 +135,7 @@ func (c *UserClient) Info(req *ReqFind) (*User, error) {
 		return nil, err
 	}
 
-	httpResponse := httpclient.Send(&httpclient.Config{
+	httpResponse := httpclient.Send(&httpclient.HttpConfig{
 		Url:    c.Url + "/user/info",
 		Method: "POST",
 		Headers: &map[string]string{

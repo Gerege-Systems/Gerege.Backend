@@ -23,8 +23,8 @@ import (
 //
 // Body: хүсэлтийн бие
 //
-// Timeout: хүсэлтийн timeout явуулаагүй үед 10сек байна
-type Config struct {
+// Timeout: хүсэлтийн timeout явуулаагүй үед 45 сек байна
+type HttpConfig struct {
 	Url        string
 	Method     string
 	Headers    *map[string]string
@@ -33,14 +33,14 @@ type Config struct {
 	Timeout    uint
 }
 
-// Response
+// HttpResult
 //
 // IsSuccess: Амжилттай бол true байна.
 //
 // Code: 0 бол client кодын алдаа бусад тохиолдолд httpStatusCode байна.
 //
 // Message:
-type Response struct {
+type HttpResult struct {
 	IsSuccess bool
 	Code      int
 	Message   string
@@ -48,73 +48,64 @@ type Response struct {
 }
 
 // Send: send http request
-func Send(config *Config) *Response {
-	if config.Method == "" {
-		config.Method = "GET"
+func Send(httpConfig *HttpConfig) *HttpResult {
+	if httpConfig.Method == "" {
+		httpConfig.Method = "GET"
+	}
+	httpConfig.Method = strings.ToUpper(httpConfig.Method)
+
+	if httpConfig.Timeout == 0 {
+		httpConfig.Timeout = 45
 	}
 
-	if config.Timeout == 0 {
-		config.Timeout = 10
+	requestUrl, err := url.Parse(httpConfig.Url)
+	if err != nil {
+		return &HttpResult{IsSuccess: false, Code: 0, Message: err.Error()}
 	}
 
-	client := http.Client{
-		Timeout: time.Duration(config.Timeout) * time.Second,
+	urlValues := requestUrl.Query()
+	if httpConfig.Parameters != nil {
+		for k, v := range *httpConfig.Parameters {
+			urlValues.Set(k, strings.Join(v, ","))
+		}
+	}
+	requestUrl.RawQuery = urlValues.Encode()
+
+	httpRequest, err := http.NewRequest(httpConfig.Method, requestUrl.String(), bytes.NewBuffer(httpConfig.Body))
+	if err != nil {
+		return &HttpResult{IsSuccess: false, Code: 0, Message: err.Error()}
+	}
+
+	if httpConfig.Headers != nil {
+		for k, v := range *httpConfig.Headers {
+			httpRequest.Header.Set(k, v)
+		}
+	}
+
+	httpClient := http.Client{
+		Timeout: time.Duration(httpConfig.Timeout) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-	u, err := url.Parse(config.Url)
-	if err != nil {
-		return &Response{IsSuccess: false, Code: 0, Message: err.Error()}
-	}
-
-	config.Method = strings.ToUpper(config.Method)
-
-	q := u.Query()
-	if config.Parameters != nil {
-		for k, v := range *config.Parameters {
-			q.Set(k, strings.Join(v, ","))
-		}
-	}
-	u.RawQuery = q.Encode()
-
-	req := &http.Request{}
-	if config.Body != nil {
-		req, err = http.NewRequest(config.Method, u.String(), bytes.NewBuffer(config.Body))
-		if err != nil {
-			return &Response{IsSuccess: false, Code: 0, Message: err.Error()}
-		}
-	} else {
-		req, err = http.NewRequest(config.Method, u.String(), nil)
-		if err != nil {
-			return &Response{IsSuccess: false, Code: 0, Message: err.Error()}
-		}
-	}
-
-	if config.Headers != nil {
-		for k, v := range *config.Headers {
-			req.Header.Set(k, v)
-		}
-	}
-
-	httpResponse, httpError := client.Do(req)
+	httpResponse, httpError := httpClient.Do(httpRequest)
 	if httpError != nil {
-		return &Response{IsSuccess: false, Code: 0, Message: httpError.Error()}
+		return &HttpResult{IsSuccess: false, Code: 0, Message: httpError.Error()}
 	}
 
 	if httpResponse == nil {
-		return &Response{IsSuccess: false, Code: 0, Message: "httpResponse empty"}
+		return &HttpResult{IsSuccess: false, Code: 0, Message: "httpResponse empty"}
 	}
 
-	log.Printf("%d %s %s\n", httpResponse.StatusCode, config.Method, req.URL.String())
+	log.Printf("%d %s %s\n", httpResponse.StatusCode, httpConfig.Method, httpRequest.URL.String())
 
 	body, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
-		return &Response{IsSuccess: false, Code: 0, Message: err.Error()}
+		return &HttpResult{IsSuccess: false, Code: 0, Message: err.Error()}
 	}
 	defer httpResponse.Body.Close()
 
-	return &Response{IsSuccess: httpResponse.StatusCode == http.StatusOK,
+	return &HttpResult{IsSuccess: httpResponse.StatusCode == http.StatusOK,
 		Code:    httpResponse.StatusCode,
 		Message: httpResponse.Status,
 		Body:    body}
