@@ -41,9 +41,10 @@ type User struct {
 	FirstName       string `json:"first_name"`
 	Gender          uint   `json:"gender"`
 	BirthDate       string `json:"birth_date"`
-	IsForeign       uint   `json:"is_foreign"`
-	Email           string `json:"email"`
 	PhoneNo         string `json:"phone_no"`
+	Email           string `json:"email"`
+	CountryCode     string `json:"country_code"`
+	Hash            string `json:"hash"`
 	AimagId         uint   `json:"aimag_id"`
 	AimagCode       string `json:"aimag_code"`
 	AimagName       string `json:"aimag_name"`
@@ -54,15 +55,12 @@ type User struct {
 	BagCode         string `json:"bag_code"`
 	BagName         string `json:"bag_name"`
 	AddressDetail   string `json:"address_detail"`
+	IsForeign       uint   `json:"is_foreign"`
 	AddressType     string `json:"address_type"`
 	AddressTypeName string `json:"address_type_name"`
 	Nationality     string `json:"nationality"`
-	CountryCode     string `json:"country_code"`
 	CountryName     string `json:"country_name"`
 	CountryNameEn   string `json:"country_name_en"`
-	FirstNameEn     string `json:"first_name_en"`
-	LastNameEn      string `json:"last_name_en"`
-	FamilyNameEn    string `json:"family_name_en"`
 	ProfileImgUrl   string `json:"profile_img_url"`
 }
 
@@ -80,30 +78,7 @@ type ReqFind struct {
 	Mrz            string `json:"mrz"`
 }
 
-type ResFind struct {
-	Id            uint   `json:"id"`
-	CivilId       uint   `json:"civil_id"`
-	RegNo         string `json:"reg_no"`
-	FamilyName    string `json:"family_name"`
-	LastName      string `json:"last_name"`
-	FirstName     string `json:"first_name"`
-	CountryCode   string `json:"country_code"`
-	BirthDate     string `json:"birth_date"`
-	Gender        uint   `json:"gender"`
-	AddressDetail string `json:"address_detail"`
-	Hash          string `json:"hash"`
-	Email         string `json:"email"`
-	PhoneNo       string `json:"phone_no"`
-	ProfileImgUrl string `json:"profile_img_url"`
-	AimagCode     string `json:"aimag_code"`
-	AimagName     string `json:"aimag_name"`
-	SumCode       string `json:"sum_code"`
-	SumName       string `json:"sum_name"`
-	BagCode       string `json:"bag_code"`
-	BagName       string `json:"bag_name"`
-}
-
-func (c *UserClient) Find(req *ReqFind) (*ResFind, error) {
+func (c *UserClient) Find(req *ReqFind) (*User, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -119,7 +94,7 @@ func (c *UserClient) Find(req *ReqFind) (*ResFind, error) {
 	})
 
 	if httpResponse.IsSuccess {
-		user := ResFind{}
+		user := User{}
 		if err := json.Unmarshal(httpResponse.Body, &user); err != nil {
 			return nil, fmt.Errorf("cant parse user: %s", err.Error())
 		}
